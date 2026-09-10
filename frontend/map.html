@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mining Explorer — Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-brand">Mining Explorer</span>
+    <a href="index.html">Introduction</a>
+    <a href="map.html" class="active">Map</a>
+    <a href="stats.html">Statistics</a>
+    <a href="explore.html">Explore Data</a>
+  </div>
+</nav>
+
+<header>
+  <div class="header-inner">
+    <h1>Interactive Map</h1>
+    <p class="subtitle">Currently operating mineral sites across Western Australia, pulled live from a PostGIS-backed database.</p>
+  </div>
+</header>
+
+<main>
+  <div class="status-line">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Connecting to API...</span>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">sites shown</div>
+      <div class="summary-value" id="statShown">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">status</div>
+      <div class="summary-value">Operating</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">region</div>
+      <div class="summary-value">WA</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">source</div>
+      <div class="summary-value">MINEDEX</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="limitSelect">SITES TO LOAD</label>
+      <select id="limitSelect">
+        <option value="100">100</option>
+        <option value="500" selected>500</option>
+        <option value="1000">1000</option>
+        <option value="4561">All operating (4,561)</option>
+      </select>
+    </div>
+    <div class="legend">
+      <span class="legend-dot"></span> Operating mine or deposit
+    </div>
+  </div>
+
+  <div id="map"></div>
+</main>
+
+<footer>
+  Built by Pedro Vasconez — FastAPI, PostgreSQL with PostGIS, Leaflet.js.
+  API served locally at <a href="http://127.0.0.1:8000/sites/geojson" target="_blank">127.0.0.1:8000/sites/geojson</a>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const API_BASE = 'http://127.0.0.1:8000';
+
+  const map = L.map('map', {
+    zoomControl: true
+  }).setView([-26.5, 121.5], 5);
+
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap',
+    maxZoom: 17
+  }).addTo(map);
+
+  let markersLayer = L.layerGroup().addTo(map);
+
+  async function loadSites(limit) {
+    markersLayer.clearLayers();
+    document.getElementById('statusText').textContent = 'Loading sites...';
+
+    try {
+      const response = await fetch(`${API_BASE}/sites/geojson?limit=${limit}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const geojson = await response.json();
+
+      const count = geojson.features.length;
+      document.getElementById('statusDot').classList.remove('error');
+      document.getElementById('statusText').textContent = `connected — ${count} operating sites loaded from live api`;
+      document.getElementById('statShown').textContent = count.toLocaleString();
+
+      geojson.features.forEach(feature => {
+        const [lon, lat] = feature.geometry.coordinates;
+        const props = feature.properties;
+
+        const marker = L.circleMarker([lat, lon], {
+          radius: 5,
+          fillColor: '#a8481f',
+          color: '#2b2620',
+          weight: 1,
+          fillOpacity: 0.85
+        });
+
+        marker.bindPopup(`
+          <div class="popup-title">${props.site_title}</div>
+          <div class="popup-row"><strong>Type:</strong> ${props.site_type}</div>
+          <div class="popup-row"><strong>Commodity:</strong> ${props.commodity}</div>
+          <div class="popup-row"><strong>Status:</strong> ${props.site_stage}</div>
+        `);
+
+        markersLayer.addLayer(marker);
+      });
+    } catch (err) {
+      document.getElementById('statusDot').classList.add('error');
+      document.getElementById('statusText').textContent = `connection failed: ${err.message}. is the fastapi server running at 127.0.0.1:8000?`;
+    }
+  }
+
+  document.getElementById('limitSelect').addEventListener('change', (e) => {
+    loadSites(e.target.value);
+  });
+
+  loadSites(500);
+</script>
+
+</body>
+</html>

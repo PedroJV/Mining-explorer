@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mining Explorer — Explore Data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-brand">Mining Explorer</span>
+    <a href="index.html">Introduction</a>
+    <a href="map.html">Map</a>
+    <a href="stats.html">Statistics</a>
+    <a href="explore.html" class="active">Explore Data</a>
+  </div>
+</nav>
+
+<header>
+  <div class="header-inner">
+    <h1>Explore Data</h1>
+    <p class="subtitle">Search and filter across all 48,414 recorded sites, not just the ones currently operating.</p>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="control-group">
+      <label for="searchInput">SEARCH BY NAME</label>
+      <input type="text" id="searchInput" placeholder="e.g. Golden Mile">
+    </div>
+    <div class="control-group">
+      <label for="stageSelect">STAGE</label>
+      <select id="stageSelect">
+        <option value="">All</option>
+        <option value="Operating">Operating</option>
+        <option value="Shut">Shut</option>
+        <option value="Undeveloped">Undeveloped</option>
+        <option value="Proposed">Proposed</option>
+        <option value="Care and Maintenance">Care and Maintenance</option>
+        <option value="Under Development">Under Development</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="typeSelect">TYPE</label>
+      <select id="typeSelect">
+        <option value="">All</option>
+        <option value="Mine">Mine</option>
+        <option value="Prospect">Prospect</option>
+        <option value="Infrastructure">Infrastructure</option>
+        <option value="Occurrence">Occurrence</option>
+        <option value="Deposit">Deposit</option>
+        <option value="Target">Target</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="result-count" id="resultCount">Loading...</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Site Name</th>
+          <th>Type</th>
+          <th>Stage</th>
+          <th>Commodity</th>
+          <th>Region</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <tr><td colspan="6" class="loading-state">Loading sites...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <button class="page-btn" id="prevBtn">&larr; Prev</button>
+    <span id="pageInfo">Page 1</span>
+    <button class="page-btn" id="nextBtn">Next &rarr;</button>
+  </div>
+</main>
+
+<footer>
+  Built by Pedro Vasconez — FastAPI, PostgreSQL with PostGIS, Leaflet.js.
+  API served locally at <a href="http://127.0.0.1:8000/sites/list" target="_blank">127.0.0.1:8000/sites/list</a>
+</footer>
+
+<script>
+  const API_BASE = 'http://127.0.0.1:8000';
+  let currentPage = 1;
+  const pageSize = 50;
+  let debounceTimer;
+
+  function stageClass(stage) {
+    if (stage === 'Operating') return 'stage-operating';
+    if (stage === 'Shut') return 'stage-shut';
+    return 'stage-other';
+  }
+
+  async function loadResults() {
+    const search = document.getElementById('searchInput').value;
+    const stage = document.getElementById('stageSelect').value;
+    const siteType = document.getElementById('typeSelect').value;
+
+    document.getElementById('resultsBody').innerHTML = '<tr><td colspan="6" class="loading-state">Loading...</td></tr>';
+
+    const params = new URLSearchParams({
+      page: currentPage,
+      page_size: pageSize,
+      search: search,
+      stage: stage,
+      site_type: siteType
+    });
+
+    try {
+      const response = await fetch(`${API_BASE}/sites/list?${params}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+
+      document.getElementById('resultCount').textContent =
+        `${data.total.toLocaleString()} sites match — showing page ${data.page}`;
+
+      if (data.results.length === 0) {
+        document.getElementById('resultsBody').innerHTML =
+          '<tr><td colspan="6" class="empty-state">No sites match these filters.</td></tr>';
+      } else {
+        document.getElementById('resultsBody').innerHTML = data.results.map(site => `
+          <tr>
+            <td>${site.site_id}</td>
+            <td>${site.site_title}</td>
+            <td>${site.site_type}</td>
+            <td><span class="stage-tag ${stageClass(site.site_stage)}">${site.site_stage}</span></td>
+            <td>${site.commodity || '—'}</td>
+            <td>${site.location_region}</td>
+          </tr>
+        `).join('');
+      }
+
+      const totalPages = Math.ceil(data.total / pageSize);
+      document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages.toLocaleString()}`;
+      document.getElementById('prevBtn').disabled = currentPage <= 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+
+    } catch (err) {
+      document.getElementById('resultsBody').innerHTML =
+        `<tr><td colspan="6" class="empty-state">Connection failed: ${err.message}. Is the FastAPI server running?</td></tr>`;
+    }
+  }
+
+  function debouncedLoad() {
+    clearTimeout(debounceTimer);
+    currentPage = 1;
+    debounceTimer = setTimeout(loadResults, 350);
+  }
+
+  document.getElementById('searchInput').addEventListener('input', debouncedLoad);
+  document.getElementById('stageSelect').addEventListener('change', debouncedLoad);
+  document.getElementById('typeSelect').addEventListener('change', debouncedLoad);
+
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; loadResults(); }
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    currentPage++; loadResults();
+  });
+
+  loadResults();
+</script>
+
+</body>
+</html>

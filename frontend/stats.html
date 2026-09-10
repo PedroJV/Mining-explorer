@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mining Explorer — Statistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-brand">Mining Explorer</span>
+    <a href="index.html">Introduction</a>
+    <a href="map.html">Map</a>
+    <a href="stats.html" class="active">Statistics</a>
+    <a href="explore.html">Explore Data</a>
+  </div>
+</nav>
+
+<header>
+  <div class="header-inner medium">
+    <h1>Statistics</h1>
+    <p class="subtitle">Aggregate patterns across all 48,414 recorded sites, not just the ones currently operating.</p>
+  </div>
+</header>
+
+<main class="medium">
+
+  <div class="hero-stat">
+    <div class="hero-number" id="heroPct">—</div>
+    <div class="hero-text">of all <strong>48,414</strong> sites ever recorded in MINEDEX are <strong>currently operating</strong>. The rest is history: closed mines, abandoned prospects, and deposits that were never developed.</div>
+  </div>
+
+  <div class="chart-panel full-width" style="margin-bottom: 24px;">
+    <div class="chart-title">By stage</div>
+    <div class="chart-subtitle">Where each site sits in its lifecycle, colour-coded by what it means for the site today</div>
+    <div id="chartStage" class="chart-loading">Loading...</div>
+  </div>
+
+  <div class="charts-grid">
+
+    <div class="chart-panel">
+      <div class="chart-title">By type</div>
+      <div class="chart-subtitle">What kind of site each record represents</div>
+      <div id="chartType" class="chart-loading">Loading...</div>
+    </div>
+
+    <div class="chart-panel">
+      <div class="chart-title">Top commodities</div>
+      <div class="chart-subtitle">Most commonly recorded target minerals</div>
+      <div id="chartCommodity" class="chart-loading">Loading...</div>
+    </div>
+
+    <div class="chart-panel full-width">
+      <div class="chart-title">Geography</div>
+      <div class="chart-subtitle">Mainland WA vs. the external territory administered under the same register</div>
+      <div id="regionCompare" class="chart-loading">Loading...</div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="medium">
+  Built by Pedro Vasconez — FastAPI, PostgreSQL with PostGIS, Leaflet.js.
+  API served locally at <a href="http://127.0.0.1:8000" target="_blank">127.0.0.1:8000</a>
+</footer>
+
+<script>
+  const API_BASE = 'http://127.0.0.1:8000';
+
+  function toneFor(label) {
+    if (label === 'Operating') return 'tone-operating';
+    if (label === 'Shut') return 'tone-shut';
+    if (label === 'Undeveloped') return 'tone-neutral';
+    return 'tone-rust';
+  }
+
+  function renderBarChart(containerId, data, colored) {
+    const container = document.getElementById(containerId);
+    const total = data.reduce((sum, d) => sum + d.count, 0);
+    const maxCount = Math.max(...data.map(d => d.count));
+
+    container.innerHTML = data.map(d => {
+      const tone = colored ? toneFor(d.label) : 'tone-rust';
+      const pct = ((d.count / total) * 100).toFixed(1);
+      return `
+        <div class="bar-row">
+          <div class="bar-label" title="${d.label}">${d.label || '(none)'}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${tone}" style="width: ${(d.count / maxCount * 100).toFixed(1)}%"></div>
+          </div>
+          <div class="bar-value">${d.count.toLocaleString()}<span class="bar-pct">${pct}%</span></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadChart(endpoint, containerId, colored = false) {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      renderBarChart(containerId, data, colored);
+      return data;
+    } catch (err) {
+      document.getElementById(containerId).textContent = `Could not load: ${err.message}`;
+    }
+  }
+
+  async function loadHeroStat() {
+    try {
+      const stageData = await fetch(`${API_BASE}/stats/by-stage`).then(r => r.json());
+      const total = stageData.reduce((sum, d) => sum + d.count, 0);
+      const operating = stageData.find(d => d.label === 'Operating');
+      const pct = operating ? ((operating.count / total) * 100).toFixed(1) : '—';
+      document.getElementById('heroPct').textContent = `${pct}%`;
+    } catch (err) {
+      document.getElementById('heroPct').textContent = '—';
+    }
+  }
+
+  async function loadRegionCompare() {
+    try {
+      const data = await fetch(`${API_BASE}/stats/by-region`).then(r => r.json());
+      const mainland = data.find(d => d.label === 'WA Mainland') || { count: 0 };
+      const others = data.filter(d => d.label !== 'WA Mainland');
+
+      let html = `
+        <div class="region-compare">
+          <div class="region-block">
+            <div class="region-number">${mainland.count.toLocaleString()}</div>
+            <div class="region-label">WA Mainland</div>
+          </div>
+      `;
+      others.forEach(o => {
+        html += `
+          <div class="region-block minor">
+            <div class="region-number">${o.count}</div>
+            <div class="region-label">${o.label}</div>
+          </div>
+        `;
+      });
+      html += `</div>
+        <div class="region-note">Christmas Island sites are administered under WA's mining register despite sitting in the Indian Ocean, far from the mainland, since the territory has no mining authority of its own.</div>`;
+
+      document.getElementById('regionCompare').innerHTML = html;
+    } catch (err) {
+      document.getElementById('regionCompare').textContent = `Could not load: ${err.message}`;
+    }
+  }
+
+  loadHeroStat();
+  loadChart('/stats/by-stage', 'chartStage', true);
+  loadChart('/stats/by-type', 'chartType');
+  loadChart('/stats/top-commodities?limit=10', 'chartCommodity');
+  loadRegionCompare();
+</script>
+
+</body>
+</html>

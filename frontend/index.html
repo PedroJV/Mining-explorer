@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mining Explorer — Introduction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-brand">Mining Explorer</span>
+    <a href="index.html" class="active">Introduction</a>
+    <a href="map.html">Map</a>
+    <a href="stats.html">Statistics</a>
+    <a href="explore.html">Explore Data</a>
+  </div>
+</nav>
+
+<header class="header-large">
+  <div class="header-inner narrow">
+    <h1 class="large">Mining Explorer</h1>
+    <p class="subtitle large">A data platform exploring 48,414 mining and mineral sites across Western Australia, built from a live government API, PostGIS spatial data, and a FastAPI service.</p>
+  </div>
+</header>
+
+<main class="narrow">
+
+  <section>
+    <h2>Why Western Australia</h2>
+    <p>Western Australia's mining story begins in 1893, when prospector Paddy Hannan discovered gold near what became Kalgoorlie, triggering a rush to the area later nicknamed the Golden Mile. That single discovery underpinned the rapid growth of what had been a remote settlement and helped lay the foundations for the state's development.</p>
+    <p>A second wave arrived decades later. Iron ore had been identified in the Pilbara region as early as the 1890s, but a federal export ban (in place from 1938 due to the lead-up to the Second World War) meant it stayed largely undeveloped for years. Once that ban was lifted in the early 1960s, the Pilbara transformed rapidly: the Goldsworthy deposit became the region's first iron ore mine in 1966, followed by major projects like Mount Whaleback and Mount Tom Price. The Pilbara remains one of the world's most significant iron ore regions today, alongside continuing gold, nickel, and lithium production across the state.</p>
+  </section>
+
+  <section>
+    <h2>What's in this dataset</h2>
+    <p>This project draws on MINEDEX, the Western Australian government's official register of mines and mineral deposits, maintained by the Department of Energy, Mines, Industry Regulation and Safety. It's pulled live from their public API, not a static download, so the numbers reflect the most current published register.</p>
+
+    <div class="fact-grid">
+      <div class="fact-card">
+        <div class="fact-label">total sites</div>
+        <div class="fact-value">48,414</div>
+        <div class="fact-detail">Every recorded mine, deposit, prospect and occurrence in WA</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-label">currently operating</div>
+        <div class="fact-value">4,561</div>
+        <div class="fact-detail">Just 9.4% — most of the register is historical</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-label">shut or undeveloped</div>
+        <div class="fact-value">36,937</div>
+        <div class="fact-detail">Closed mines and sites that were never built</div>
+      </div>
+    </div>
+
+    <p>It's easy to assume a "mining database" means active mines, but MINEDEX is closer to a complete historical ledger. Of the 48,414 sites, 20,248 are recorded as shut and 16,689 as undeveloped, meaning they were identified or explored but never became a working mine. Only 4,561 sites, roughly one in ten, are actively operating today.</p>
+  </section>
+
+  <section>
+    <h2>Types of sites</h2>
+    <p>MINEDEX doesn't only track mines. It records several stages of a site's life, from early-stage targets through to fully operating mines:</p>
+    <div class="commodity-list">
+      <span class="commodity-tag">Mine</span>
+      <span class="commodity-tag">Deposit</span>
+      <span class="commodity-tag">Prospect</span>
+      <span class="commodity-tag">Occurrence</span>
+      <span class="commodity-tag">Target</span>
+      <span class="commodity-tag">Infrastructure</span>
+      <span class="commodity-tag">Geological Observation</span>
+    </div>
+    <p>A "Prospect" or "Target" is a location believed to hold minerals worth investigating, often long before any mining occurs, if it ever does. An "Occurrence" simply records that a mineral was found there, without implying it's economically worth extracting.</p>
+  </section>
+
+  <section>
+    <h2>A note on Christmas Island</h2>
+    <div class="note-box">
+      Four sites in this dataset sit on Christmas Island, an Australian External Territory in the Indian Ocean, far from the WA coastline. It appears in a "WA" mining register because WA's Department of Energy, Mines, Industry Regulation and Safety administers mining regulation there under a special arrangement, since the island doesn't have its own state-level mining authority. It's a small but genuine quirk of how Australia's territories are governed.
+    </div>
+  </section>
+
+  <section>
+    <h2>Explore the data</h2>
+    <p>The sections that follow let you explore this register in three ways: a live interactive map of currently operating sites, aggregate statistics across the full historical register, and a searchable table covering all 48,414 records.</p>
+    <div class="cta-row">
+      <a href="map.html" class="cta">View the map</a>
+      <a href="stats.html" class="cta secondary">See statistics</a>
+      <a href="explore.html" class="cta secondary">Explore all data</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="narrow">
+  Built by Pedro Vasconez — FastAPI, PostgreSQL with PostGIS, Leaflet.js.
+  Data source: <a href="https://catalogue.data.wa.gov.au/dataset/minedex-dmirs-001" target="_blank">MINEDEX, Government of Western Australia</a>
+</footer>
+
+</body>
+</html>
